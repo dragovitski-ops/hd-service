@@ -97,20 +97,31 @@ def get_gates(pos):
 
 def get_defined(active):
     defined = set()
+    active_channels = []
     for g1,g2 in CHANNELS:
         if g1 in active and g2 in active:
+            active_channels.append((g1,g2))
             for c,cg in CENTER_GATES.items():
                 if g1 in cg or g2 in cg:
                     defined.add(c)
     return defined
 
 def get_type(defined):
-    hs,ht,hso,hh,hsp,hr = ("sacral" in defined,"throat" in defined,
-        "solar" in defined,"heart" in defined,"spleen" in defined,"root" in defined)
+    hs = "sacral" in defined
+    ht = "throat" in defined
+    hso = "solar" in defined
+    hh = "heart" in defined
+    hsp = "spleen" in defined
+    hr = "root" in defined
+    # Manifesting Generator: sacral + throat connected
     if hs and ht: return "Манифестиращ Генератор","Изчакай да откликнеш","Неудовлетворение / Гняв"
+    # Generator: sacral defined but not connected to throat
     if hs: return "Генератор","Изчакай да откликнеш","Неудовлетворение"
-    if ht and (hh or hso or hsp or hr): return "Манифестор","Информирай преди да действаш","Гняв"
+    # Manifestor: throat connected to motor (solar/heart/root) but NO sacral
+    if ht and not hs and (hh or hso or hr): return "Манифестор","Информирай преди да действаш","Гняв"
+    # Reflector: no defined centers
     if len(defined)==0: return "Рефлектор","Изчакай лунен цикъл","Разочарование"
+    # Projector: everything else
     return "Проектор","Изчакай покана","Горчивина"
 
 def get_authority(defined):
@@ -166,7 +177,11 @@ def calculate(data:BirthData):
 
         cross_key = f"{p_sun_g}/{p_earth_g}"
         cross_name = CROSS_MAP.get(cross_key, f"Кръстът на Порта {p_sun_g}/{p_earth_g}")
-        angle = "Десен Ъгъл" if p_sun_l<=3 else ("Съединение" if p_sun_l==4 else "Ляв Ъгъл")
+        # Correct angle determination:
+        # Lines 1-3 = Right Angle Cross (Десен Ъгъл)
+        # Line 4 = Juxtaposition (Съпоставен / Неподвижен)
+        # Lines 5-6 = Left Angle Cross (Ляв Ъгъл)
+        angle = "Десен Ъгъл" if p_sun_l<=3 else ("Съпоставен" if p_sun_l==4 else "Ляв Ъгъл")
         cross = f"{angle} — {cross_name} ({p_sun_g}/{p_earth_g} | {d_sun_g}/{d_earth_g})"
 
         return {
