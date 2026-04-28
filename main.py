@@ -139,7 +139,16 @@ def calculate(data:BirthData):
         ut = data.hour - data.utc_offset + data.minute/60
         jd = swe.julday(data.year, data.month, data.day, ut)
         p_pos = get_positions(jd)
-        d_pos = get_positions(jd - 88)
+        # Design = 88 solar arc degrees before birth sun
+        p_sun_lon = swe.calc_ut(jd, swe.SUN)[0][0]
+        design_sun_target = (p_sun_lon - 88) % 360
+        design_jd = jd - 89
+        for _ in range(20):
+            test_lon = swe.calc_ut(design_jd, swe.SUN)[0][0]
+            diff = ((test_lon - design_sun_target + 180) % 360) - 180
+            if abs(diff) < 0.001: break
+            design_jd -= diff / 0.9856
+        d_pos = get_positions(design_jd)
 
         p_sun_g, p_sun_l = get_gate_line(p_pos["sun"])
         p_earth_g, p_earth_l = get_gate_line((p_pos["sun"]+180)%360)
