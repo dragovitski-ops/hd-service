@@ -144,6 +144,57 @@ class BirthData(BaseModel):
 @app.get("/")
 def root(): return {"status":"Human Design API running"}
 
+@app.post("/debug")
+def debug(data: BirthData):
+    try:
+        ut = data.hour - data.utc_offset + data.minute/60
+        jd = swe.julday(data.year, data.month, data.day, ut)
+        p_pos = get_positions(jd)
+        
+        # Solar arc design
+        p_sun_lon = p_pos["sun"]
+        design_sun_target = (p_sun_lon - 88) % 360
+        design_jd = jd - 89
+        for _ in range(20):
+            test_lon = swe.calc_ut(design_jd, swe.SUN)[0][0]
+            diff = ((test_lon - design_sun_target + 180) % 360) - 180
+            if abs(diff) < 0.001: break
+            design_jd -= diff / 0.9856
+        d_pos = get_positions(design_jd)
+        
+        p_gates_list = {}
+        for name, lon in p_pos.items():
+            g, l = get_gate_line(lon)
+            p_gates_list[name] = {"lon": round(lon,3), "gate": g, "line": l}
+            if name == "sun":
+                eg, el = get_gate_line((lon+180)%360)
+                p_gates_list["earth"] = {"lon": round((lon+180)%360,3), "gate": eg, "line": el}
+        
+        d_gates_list = {}
+        for name, lon in d_pos.items():
+            g, l = get_gate_line(lon)
+            d_gates_list[name] = {"lon": round(lon,3), "gate": g, "line": l}
+            if name == "sun":
+                eg, el = get_gate_line((lon+180)%360)
+                d_gates_list["earth"] = {"lon": round((lon+180)%360,3), "gate": eg, "line": el}
+        
+        p_gates = get_gates(p_pos)
+        d_gates = get_gates(d_pos)
+        all_gates = p_gates | d_gates
+        defined = get_defined(all_gates)
+        
+        return {
+            "personality": p_gates_list,
+            "design": d_gates_list,
+            "p_gates": sorted(p_gates),
+            "d_gates": sorted(d_gates),
+            "all_gates": sorted(all_gates),
+            "defined_centers": list(defined),
+            "active_channels": [(g1,g2) for g1,g2 in CHANNELS if g1 in all_gates and g2 in all_gates]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/calculate")
 def calculate(data:BirthData):
     try:
