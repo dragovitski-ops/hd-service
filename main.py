@@ -123,11 +123,19 @@ def get_gates(pos):
 
 def get_defined(active):
     defined = set()
+    # Primary: center defined if it has a complete channel
     for g1,g2 in CHANNELS:
         if g1 in active and g2 in active:
             for c,cg in CENTER_GATES.items():
                 if g1 in cg or g2 in cg:
                     defined.add(c)
+    # Secondary: G center defined if 2+ of its gates are active
+    # (mybodygraph behavior - G can be defined via multiple active gates)
+    g_active = [g for g in CENTER_GATES["g"] if g in active]
+    if len(g_active) >= 2:
+        defined.add("g")
+    # Head/Ajna defined if they have a complete channel
+    # (already handled above via 47-64, 4-63, 17-62 etc)
     return defined
 
 def get_definition(defined, active_gates):
